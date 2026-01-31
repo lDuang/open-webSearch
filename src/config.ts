@@ -1,7 +1,7 @@
 // src/config.ts
 export interface AppConfig {
     // Search engine configuration
-    defaultSearchEngine: 'bing' | 'duckduckgo' | 'exa' | 'brave' | 'baidu' | 'csdn' | 'linuxdo'  | 'juejin';
+    defaultSearchEngine: 'github' | 'stackoverflow' | 'hackernews' | 'bing' | 'baidu' | 'reddit' | 'csdn' | 'juejin' | 'duckduckgo' | 'brave' | 'exa' | 'linuxdo';
     // List of allowed search engines (if empty, all engines are available)
     allowedSearchEngines: string[];
     // Proxy configuration
@@ -17,7 +17,7 @@ export interface AppConfig {
 // Read from environment variables or use defaults
 export const config: AppConfig = {
     // Search engine configuration
-    defaultSearchEngine: (process.env.DEFAULT_SEARCH_ENGINE as AppConfig['defaultSearchEngine']) || 'bing',
+    defaultSearchEngine: (process.env.DEFAULT_SEARCH_ENGINE as AppConfig['defaultSearchEngine']) || 'github',
     // Parse comma-separated list of allowed search engines
     allowedSearchEngines: process.env.ALLOWED_SEARCH_ENGINES ?
         process.env.ALLOWED_SEARCH_ENGINES.split(',').map(e => e.trim()) :
@@ -33,13 +33,13 @@ export const config: AppConfig = {
     enableHttpServer: process.env.MODE ? ['both', 'http'].includes(process.env.MODE) : true
 };
 
-// Valid search engines list
-const validSearchEngines = ['bing', 'duckduckgo', 'exa', 'brave', 'baidu', 'csdn', 'linuxdo', 'juejin'];
+// Valid search engines list (sorted by quality)
+const validSearchEngines = ['github', 'stackoverflow', 'hackernews', 'bing', 'baidu', 'reddit', 'csdn', 'juejin', 'zhihu', 'duckduckgo', 'brave', 'exa', 'linuxdo'];
 
 // Validate default search engine
 if (!validSearchEngines.includes(config.defaultSearchEngine)) {
-    console.warn(`Invalid DEFAULT_SEARCH_ENGINE: "${config.defaultSearchEngine}", falling back to "bing"`);
-    config.defaultSearchEngine = 'bing';
+    console.warn(`Invalid DEFAULT_SEARCH_ENGINE: "${config.defaultSearchEngine}", falling back to "github"`);
+    config.defaultSearchEngine = 'github';
 }
 
 // Validate allowed search engines

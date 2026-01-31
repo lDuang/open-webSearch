@@ -18,25 +18,28 @@ import { searchJuejin } from "../engines/juejin/index.js";
 import { searchHackerNews } from "../engines/hackernews/index.js";
 import { searchStackOverflow } from "../engines/stackoverflow/index.js";
 import { searchReddit } from "../engines/reddit/index.js";
+import { searchZhiHu } from "../engines/zhihu/index.js";
+import { fetchZhiHuArticle } from "../engines/zhihu/fetchZhihuArticle.js";
 
-// 支持的搜索引擎
-const SUPPORTED_ENGINES = ['baidu', 'bing', 'linuxdo', 'csdn', 'duckduckgo','exa','brave','juejin','hackernews','github','stackoverflow','reddit'] as const;
+// 支持的搜索引擎（按可信度和质量排序）
+const SUPPORTED_ENGINES = ['github', 'stackoverflow', 'hackernews', 'bing', 'baidu', 'reddit', 'csdn', 'juejin', 'zhihu', 'duckduckgo', 'brave', 'exa', 'linuxdo'] as const;
 type SupportedEngine = typeof SUPPORTED_ENGINES[number];
 
 // 搜索引擎调用函数映射
 const engineMap: Record<SupportedEngine, (query: string, limit: number) => Promise<SearchResult[]>> = {
-    baidu: searchBaidu,
-    bing: searchBing,
-    linuxdo: searchLinuxDo,
-    csdn: searchCsdn,
-    duckduckgo: searchDuckDuckGo,
-    exa: searchExa,
-    brave: searchBrave,
-    juejin: searchJuejin,
-    hackernews: searchHackerNews,
     github: searchGithub,
     stackoverflow: searchStackOverflow,
+    hackernews: searchHackerNews,
+    bing: searchBing,
+    baidu: searchBaidu,
     reddit: searchReddit,
+    csdn: searchCsdn,
+    juejin: searchJuejin,
+    zhihu: searchZhiHu,
+    duckduckgo: searchDuckDuckGo,
+    brave: searchBrave,
+    exa: searchExa,
+    linuxdo: searchLinuxDo,
 };
 
 // 分配搜索结果数量
@@ -88,7 +91,7 @@ const executeSearch = async (query: string, engines: string[], limit: number): P
 };
 
 // 验证文章 URL
-const validateArticleUrl = (url: string, type: 'linuxdo' | 'csdn' | 'juejin'): boolean => {
+const validateArticleUrl = (url: string, type: 'linuxdo' | 'csdn' | 'juejin' | 'zhihu'): boolean => {
     try {
         const urlObj = new URL(url);
 
@@ -99,6 +102,8 @@ const validateArticleUrl = (url: string, type: 'linuxdo' | 'csdn' | 'juejin'): b
                 return urlObj.hostname === 'blog.csdn.net' && url.includes('/article/details/');
             case 'juejin':
                 return urlObj.hostname === 'juejin.cn' && url.includes('/post/');
+            case 'zhihu':
+                return urlObj.hostname === 'zhuanlan.zhihu.com';
             default:
                 return false;
         }
@@ -157,22 +162,31 @@ export const setupTools = (server: McpServer): void => {
     const fetchCsdnToolName = getToolName('MCP_TOOL_FETCH_CSDN_NAME', 'fetchCsdnArticle');
     const fetchGithubToolName = getToolName('MCP_TOOL_FETCH_GITHUB_NAME', 'fetchGithubReadme');
     const fetchJuejinToolName = getToolName('MCP_TOOL_FETCH_JUEJIN_NAME', 'fetchJuejinArticle');
+    const fetchZhihuToolName = getToolName('MCP_TOOL_FETCH_ZHIHU_NAME', 'fetchZhihuArticle');
 
     // 搜索工具
     // 生成搜索工具的动态描述
     const getSearchDescription = () => {
         if (config.allowedSearchEngines.length === 0) {
-            return "Search the web using multiple engines (e.g., Baidu, Bing, DuckDuckGo, CSDN, Exa, Brave, Juejin(掘金)) with no API key required";
+            return "Search with 13 engines: GitHub, Stack Overflow, Hacker News, Bing, Baidu, Reddit, CSDN, Juejin, Zhihu, DuckDuckGo, Brave, Exa";
         } else {
-            const enginesText = config.allowedSearchEngines.map(e => {
-                switch (e) {
-                    case 'juejin':
-                        return 'Juejin(掘金)';
-                    default:
-                        return e.charAt(0).toUpperCase() + e.slice(1);
-                }
-            }).join(', ');
-            return `Search the web using these engines: ${enginesText} (no API key required)`;
+            const engineNames: Record<string, string> = {
+                github: 'GitHub',
+                stackoverflow: 'Stack Overflow',
+                hackernews: 'Hacker News',
+                bing: 'Bing',
+                baidu: 'Baidu',
+                reddit: 'Reddit',
+                csdn: 'CSDN',
+                juejin: 'Juejin(掘金)',
+                zhihu: 'Zhihu',
+                duckduckgo: 'DuckDuckGo',
+                brave: 'Brave',
+                exa: 'Exa',
+                linuxdo: 'Linux.do'
+            };
+            const enginesText = config.allowedSearchEngines.map(e => engineNames[e] || e).join(', ');
+            return `Search with: ${enginesText}`;
         }
     };
 
@@ -372,6 +386,40 @@ export const setupTools = (server: McpServer): void => {
                 };
             } catch (error) {
                 console.error('Failed to fetch Juejin article:', error);
+                return {
+                    content: [{
+                        type: 'text',
+                        text: `Failed to fetch article: ${error instanceof Error ? error.message : 'Unknown error'}`
+                    }],
+                    isError: true
+                };
+            }
+        }
+    );
+
+    // 获取知乎文章工具
+    server.tool(
+        fetchZhihuToolName,
+        "Fetch full article content from a Zhihu column post URL",
+        {
+            url: z.string().url().refine(
+                (url) => validateArticleUrl(url, 'zhihu'),
+                "URL must be from zhuanlan.zhihu.com"
+            )
+        },
+        async ({url}) => {
+            try {
+                console.error(`Fetching Zhihu article: ${url}`);
+                const result = await fetchZhiHuArticle(url);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: result.content
+                    }]
+                };
+            } catch (error) {
+                console.error('Failed to fetch Zhihu article:', error);
                 return {
                     content: [{
                         type: 'text',

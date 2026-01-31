@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { SearchResult } from '../../types.js';
 
 /**
  * GitHub README Fetcher - Extract repo info from URLs and fetch README content
@@ -123,4 +124,52 @@ async function getReadmeFromUrl(githubUrl: string): Promise<string | null> {
  */
 export async function fetchGithubReadme(githubUrl: string): Promise<string | null> {
     return getReadmeFromUrl(githubUrl);
+}
+
+/**
+ * Search GitHub repositories
+ * @param query Search query
+ * @param limit Maximum number of results
+ * @returns Search results
+ */
+export async function searchGithub(query: string, limit: number): Promise<SearchResult[]> {
+    try {
+        const token = process.env.GITHUB_TOKEN; // Optional: for higher rate limit
+        const headers: Record<string, string> = {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'GitHub-Search/1.0'
+        };
+
+        if (token) {
+            headers['Authorization'] = `token ${token}`;
+        }
+
+        const response = await axios.get('https://api.github.com/search/repositories', {
+            params: {
+                q: query,
+                per_page: Math.min(limit, 100), // GitHub max is 100 per page
+                sort: 'stars',
+                order: 'desc'
+            },
+            headers,
+            timeout: 10000
+        });
+
+        const results: SearchResult[] = response.data.items.map((item: any) => ({
+            title: item.full_name,
+            url: item.html_url,
+            description: item.description || '',
+            source: `${item.language || 'Unknown'} ⭐ ${item.stargazers_count}`,
+            engine: 'github'
+        }));
+
+        return results.slice(0, limit);
+    } catch (error: any) {
+        if (error.response?.status === 403) {
+            console.warn('GitHub API rate limit exceeded. Add GITHUB_TOKEN env var for higher limits.');
+        } else {
+            console.error('GitHub search failed:', error.message);
+        }
+        return [];
+    }
 }

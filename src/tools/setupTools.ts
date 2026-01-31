@@ -16,9 +16,10 @@ import {fetchGithubReadme, searchGithub} from "../engines/github/index.js";
 import { fetchJuejinArticle } from "../engines/juejin/fetchJuejinArticle.js";
 import { searchJuejin } from "../engines/juejin/index.js";
 import { searchHackerNews } from "../engines/hackernews/index.js";
+import { searchStackOverflow } from "../engines/stackoverflow/index.js";
 
 // 支持的搜索引擎
-const SUPPORTED_ENGINES = ['baidu', 'bing', 'linuxdo', 'csdn', 'duckduckgo','exa','brave','juejin','hackernews','github'] as const;
+const SUPPORTED_ENGINES = ['baidu', 'bing', 'linuxdo', 'csdn', 'duckduckgo','exa','brave','juejin','hackernews','github','stackoverflow'] as const;
 type SupportedEngine = typeof SUPPORTED_ENGINES[number];
 
 // 搜索引擎调用函数映射
@@ -33,6 +34,7 @@ const engineMap: Record<SupportedEngine, (query: string, limit: number) => Promi
     juejin: searchJuejin,
     hackernews: searchHackerNews,
     github: searchGithub,
+    stackoverflow: searchStackOverflow,
 };
 
 // 分配搜索结果数量

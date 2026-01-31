@@ -1,20 +1,16 @@
 {
   "name": "open-websearch",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "web search the internet",
   "type": "module",
   "bin": {
     "open-websearch": "./build/index.cjs"
   },
-  "files": [
-    "build"
-  ],
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=build/index.cjs",
-    "watch": "tsc --watch",
-    "inspector": "npx @modelcontextprotocol/inspector dist/index.js",
+    "watch": "esbuild src/index.ts --bundle --platform=node --format=cjs --outfile=build/index.cjs --watch",
     "start": "npm run build && node build/index.cjs",
-    "dev": "tsc && node dist/index.js",
+    "dev": "npm run build && node build/index.cjs",
     "test:stdio": "npm run build && set MODE=stdio && node build/index.cjs",
     "test:http": "npm run build && set MODE=http && node build/index.cjs",
     "test:both": "npm run build && set MODE=both && node build/index.cjs"

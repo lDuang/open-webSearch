@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { JSDOM } from 'jsdom';
+import * as cheerio from 'cheerio';
 
 export async function fetchLinuxDoArticle(url: string): Promise<{ content: string }> {
     const match = url.match(/\/topic\/(\d+)/);
@@ -35,8 +35,8 @@ export async function fetchLinuxDoArticle(url: string): Promise<{ content: strin
     });
 
     const cookedHtml = response.data?.post_stream?.posts?.[0]?.cooked || '';
-    const dom = new JSDOM(cookedHtml);
-    const plainText = dom.window.document.body.textContent?.trim() || '';
+    const $ = cheerio.load(cookedHtml);
+    const plainText = $('body').text().trim() || '';
 
     return { content: plainText };
 }
